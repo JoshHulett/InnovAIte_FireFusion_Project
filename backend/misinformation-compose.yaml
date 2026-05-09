@@ -1,0 +1,39 @@
+services:
+
+  firefusion-api: # api
+    image: firefusion/firefusion-api
+    build: ./firefusion-api/.
+    ports: 
+      - 8080:8080
+    depends_on:
+      relational-db:
+        condition: service_healthy 
+    environment:
+      BROKER_URL: ""
+      CACHE_URL: ""
+      DB_URL: "postgresql://postgres:postgres@relational-db:5432/postgres"
+      PYTHONUNBUFFERED: 1
+
+
+  relational-db: # relational database
+    image: postgres:18
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      # init will do 01 then 02 
+      # (create tables then seed them)
+      - ./utilities/misinformation/misinformation-init.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    
+      # commented out don't need them for misinformation
+      # - ./utilities/aggregator-init.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      # - ./utilities/seed-aggregator.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    ports:
+      - "5432:5432"
+
